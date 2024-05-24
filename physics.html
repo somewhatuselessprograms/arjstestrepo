@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+</script>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <!-- we import arjs version without NFT but with marker + location based support -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src=" https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js "></script>
+  <script>
+
+let markerElement = ""
+let markerRot = new THREE.Quaternion()
+let markerLoc = new THREE.Vector3()
+let markerFound = false
+let currElement = ""
+let meshElements = []
+let physicsElements = []
+let physicsScene = new CANNON.World()
+let sceneElement = ""
+physicsScene.gravity.set(0, -9.82, 0)
+const planeShape = new CANNON.Plane()
+const planeBody = new CANNON.Body({ mass: 0 })
+planeBody.addShape(planeShape)
+planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2)
+planeBody.position.y = -2.5 
+physicsScene.addBody(planeBody)
+
+AFRAME.registerComponent("main",{
+init:()=>{
+//let camera = document.querySelector("[camera='']")
+//camera.object3D.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/8)
+markerElement = document.querySelector("a-marker")
+sceneElement = document.querySelector("a-scene")
+markerElement.addEventListener("markerFound",(e)=>{
+  markerFound = true
+  console.log("hi")                  
+})
+
+markerElement.addEventListener("markerLost",(e)=>{markerFound = false})
+setInterval(addCube,500)
+
+},
+tick:()=>{
+  physicsScene.step(1/60)
+  meshElements.forEach(
+    (e,i)=>{
+      copyPos(meshElements[i].object3D,physicsElements[i])
+      copyRot(meshElements[i].object3D,physicsElements[i])
+    }
+  )
+if (markerFound){
+  markerLoc = markerElement.object3D.getWorldPosition(markerLoc)
+  markerRot = markerElement.object3D.getWorldQuaternion(markerRot)  
+}
+}});
+function addCube(){
+  if (markerRot != "" && markerFound){
+  console.log("box created!")
+  currElement = document.createElement("a-box")
+  let colors = ["red","green","blue","white","yellow"]
+  let rand = Math.floor(Math.random()*4)
+  currElement.setAttribute("material","color: " + colors[rand])
+  sceneElement.appendChild(currElement)
+  let boxShape = new CANNON.Box(new CANNON.Vec3(.5,.5,.5))
+  let cubeBody = new CANNON.Body({mass: 1,shape: boxShape})
+  copyPos(currElement.object3D,markerElement.object3D,0,0,-5)
+  copyRot(currElement.object3D,markerElement.object3D)
+  copyPos(cubeBody,currElement.object3D)
+  copyRot(cubeBody,currElement.object3D)
+  physicsScene.add(cubeBody)
+  meshElements.push(currElement) 
+  physicsElements.push(cubeBody)
+  }
+}
+function copyPos(DST,SRC,ox=0,oy=0,oz=0){
+  DST.position.x = SRC.position.x+ox
+  DST.position.y = SRC.position.y+oy
+  DST.position.z = SRC.position.z+oz
+}
+function copyRot(DST,SRC){
+  DST.quaternion.x = SRC.quaternion.x
+  DST.quaternion.y = SRC.quaternion.y
+  DST.quaternion.z = SRC.quaternion.z
+  DST.quaternion.w = SRC.quaternion.w
+}
+
+</script>
+  <body style="margin : 0px; overflow: hidden;">
+    <a-scene embedded arjs main>
+      <a-marker preset="hiro" smooth="true">
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
