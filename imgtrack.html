@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+</script>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <!-- we import arjs version without NFT but with marker + location based support -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script>
+    let vid3d = ""
+    let vid = ""
+    let marker = ""
+    let alreadyAdded = false
+    AFRAME.registerComponent("main",{
+    init:()=>{
+      marker = document.querySelector("a-marker")
+      vid3d = document.querySelector("a-video")
+      vid3d.object3D.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2)
+      vid3d.object3D.position.x = 0.388888
+      vid = document.getElementById("vid")
+      vid.loop = true
+      vid.pause()
+       vid.currentTime = 0
+      let oldTime = new Date().getTime()
+      
+      marker.addEventListener("markerFound",(e)=>{
+        if ((new Date().getTime()-oldTime)>1000){
+          vid.currentTime = 0
+        }
+        vid.play()          
+   })
+      marker.addEventListener("markerLost",(e)=>{
+        oldTime = new Date().getTime()
+      })
+      console.log("done")
+    },
+    tick:()=>{}
+
+    });
+</script>
+  <body style="margin : 0px; overflow: hidden;">
+    <a-scene embedded vr-mode-ui="enabled: false" arjs="trackingMethod: best; sourceType: webcam;debugUIEnabled: false;">
+      <a-assets>
+        <video id="vid" src="city.mp4">
+      </a-assets>
+      <a-marker type=pattern url="City.patt">
+        <a-video src="#vid" width=1.777 height=1 main></a-video>
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+<script>
+  document.querySelector('a-scene').sceneEl.camera = new THREE.PerspectiveCamera();
+</script>
+</html>
