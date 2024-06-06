@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+</script>
+  <script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
+  <!-- we import arjs version without NFT but with marker + location based support -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script>
+    let marker = ""
+    let assets = ""
+    let folder = "test01kard"
+    let alreadyAdded = false
+    let opacity = 0
+    let videoIndexes = [0]
+    let htmlElements = []
+    let aframeElements = []
+    let layersLen = 6
+    let layerHeight = 0.005
+    let maxLayerHeight = 0.25
+    let minLayerHeight = 0.005
+    let zeros = 2
+    let currElement = ""
+    let size = 4
+    AFRAME.registerComponent("main",{
+    init:()=>{
+      marker = document.querySelector("a-marker")
+      assets = document.querySelector("a-assets")
+      for (let i = 0; i < layersLen; i++){
+        let currZeros = zeros
+       currElement = ""
+        let src = folder + "/"
+        if (i!=0){
+          currZeros-=Math.floor(Math.log10(i))+1
+        }
+        src += "0".repeat(currZeros)
+        if (i!=0){
+        src += i
+      }
+        if (videoIndexes.includes(i)){
+        currElement= document.createElement("video")
+        currElement.setAttribute("src",src+".webm")
+        currElement.setAttribute("id",i)
+        htmlElements.push(currElement)
+        assets.appendChild(currElement)
+        currElement= document.createElement("a-video")
+        }
+        else{
+        currElement= document.createElement("image")
+        currElement.setAttribute("src",src+".png")
+        currElement.setAttribute("id",i)
+        htmlElements.push(currElement)
+        assets.appendChild(currElement)
+        currElement= document.createElement("a-image")
+      }
+      currElement.setAttribute("src","#"+i)
+      currElement.setAttribute("width",size)
+      currElement.setAttribute("height",size)
+      aframeElements.push(currElement)
+      marker.appendChild(currElement)
+      }
+      let played = false
+      document.addEventListener("touchend",onPress)
+      document.addEventListener("mouseup",onPress)
+      function onPress(){
+        if (!played){
+        htmlElements.forEach((e,i)=>{
+          if (videoIndexes.includes(i)){
+          e.loop = true
+          e.play()
+          e.pause()
+        }
+        })
+        played = true
+      }
+      }
+      let oldTime = new Date().getTime()
+      marker.addEventListener("markerFound",(e)=>{
+        let inter0 = setInterval(()=>{
+          if (played){
+            if ((new Date().getTime()-oldTime)>1000){
+              opacity = 0
+              layerHeight = minLayerHeight
+          let intr1 = setInterval(()=>{
+            opacity += 0.02
+            if (opacity >= 1){
+              let intr2 = setInterval(()=>{
+            layerHeight += 0.02
+            if (layerHeight >= maxLayerHeight){
+              clearInterval(intr2)
+            }
+          },50)
+              clearInterval(intr1)
+            }
+          },50)
+          htmlElements.forEach((e,i)=>{
+          if (videoIndexes.includes(i)){
+          e.currentTime = 0
+          e.play()
+        }
+        })
+        } 
+        clearInterval(inter0)   
+          }
+        })      
+   })
+      marker.addEventListener("markerLost",(e)=>{
+        oldTime = new Date().getTime()
+      })
+      console.log("done")
+    },
+    tick:()=>{
+      aframeElements.forEach((e,i)=>{
+        e.setAttribute("opacity",opacity)
+        e.object3D.position.y = layerHeight*i
+        e.object3D.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2)
+      })
+
+    }
+
+    });
+</script>
+  <body style="margin : 0px; overflow: hidden;">
+    <a-scene embedded vr-mode-ui="enabled: false" arjs="trackingMethod: best; sourceType: webcam;debugUIEnabled: false;" main>
+      <a-assets>
+      </a-assets>
+      <a-marker preset="hiro" smooth=false>
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+    <h1></h1>
+  </body>
+<script>
+  //document.querySelector('a-scene').sceneEl.camera = new THREE.PerspectiveCamera();
+</script>
+</html>
