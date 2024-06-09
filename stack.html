@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+</script>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <!-- we import arjs version without NFT but with marker + location based support -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src=" https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js "></script>
+  <script>
+
+let markerElement = ""
+let markerRot = new THREE.Quaternion()
+let markerLoc = new THREE.Vector3()
+let markerFound = false
+let currElement = ""
+let towerMesh = []
+let fallingMesh = []
+let physicsRB = []
+let physicsCollision = []
+let physicsScene = new CANNON.World()
+let sceneElement = ""
+let lastColor = ""
+let cubeSize = new THREE.Vector3(1,0.25,1)
+let gameOver = false
+let direction = "x"
+let reverse = 1
+let movementSpeed = 0.03
+physicsScene.gravity.set(0, -9.82, 0)
+const planeShape = new CANNON.Plane()
+const planeBody = new CANNON.Body({ mass: 0 })
+planeBody.addShape(planeShape)
+planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2)
+planeBody.position.y = -2.5 
+physicsScene.addBody(planeBody)
+document.addEventListener("touchend",onPress)
+document.addEventListener("mouseup",onPress)
+
+AFRAME.registerComponent("main",{
+init:()=>{
+//let camera = document.querySelector("[camera='']")
+//camera.object3D.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/8)
+markerElement = document.querySelector("a-marker")
+sceneElement = document.querySelector("a-scene")
+markerElement.addEventListener("markerFound",(e)=>{
+  markerFound = true
+  console.log("hi")                  
+})
+
+markerElement.addEventListener("markerLost",(e)=>{markerFound = false})
+
+},
+tick:()=>{
+  if (towerMesh.length>0 && !gameOver){
+  let topTower = towerMesh[towerMesh.length-1]
+  if ( (topTower.position.x > 1) | (topTower.position.z > 1) ){
+      reverse = -1
+    }
+  if  ( (topTower.position.x < -1) | (topTower.position.z < -1) ){
+    reverse = 1
+      }
+  if (direction == "x"){
+    topTower.position.x += movementSpeed*reverse   
+  }
+  if (direction == "z"){
+    topTower.position.z += movementSpeed*reverse
+  }
+}
+  //physicsScene.step(1/60)
+if (markerFound){
+  markerLoc = markerElement.object3D.getWorldPosition(markerLoc)
+  markerRot = markerElement.object3D.getWorldQuaternion(markerRot)  
+}
+}});
+function onPress(){
+  if (markerRot != "" && markerFound && !gameOver){
+  console.log("box created!")
+  currElement = document.createElement("a-box")
+  let rand = 0
+  let colors = ["red","green","blue","white","yellow"]
+  while(true){
+    rand = Math.floor(Math.random()*5)
+  if (rand != lastColor){
+    break
+  }
+  }
+  lastColor=rand
+  currElement.setAttribute("material","color: " + colors[rand])
+  currElement.object3D.position.copy(new THREE.Vector3(0,cubeSize.y/2,0))
+  if (towerMesh.length > 0){
+    let topTower = towerMesh[towerMesh.length-1]
+    console.log(currElement.object3D.position)
+      if (towerMesh.length>1){
+      let underTower = towerMesh[towerMesh.length-2]
+      let xOffset = topTower.position.x - underTower.position.x
+      let zOffset = topTower.position.z - underTower.position.z
+      let uXscale = underTower.scale.x
+      let uZscale = underTower.scale.z
+      if (xOffset > uXscale | xOffset < -uXscale | zOffset > uZscale | zOffset < -uZscale){
+        gameOver = true
+      }
+      else {
+        topTower.scale.x += -Math.abs(xOffset)
+        topTower.position.x += -xOffset/2
+        
+        topTower.scale.z += -Math.abs(zOffset)
+        topTower.position.z += -zOffset/2
+        cubeSize.z = topTower.scale.z
+        cubeSize.x = topTower.scale.x
+      }
+
+  }
+   currElement.object3D.position.copy(new THREE.Vector3(topTower.position.x,cubeSize.y/2,topTower.position.z))
+   currElement.object3D.position.y = topTower.position.y+cubeSize.y
+}
+  currElement.object3D.scale.copy(cubeSize)
+  markerElement.appendChild(currElement)
+  /*
+  let boxShape = new CANNON.Box(new CANNON.Vec3(.5,.5,.5))
+  let cubeBody = new CANNON.Body({mass: 1,shape: boxShape})
+  copyPos(currElement.object3D,markerElement.object3D,0,0,-5)
+  copyRot(currElement.object3D,markerElement.object3D)
+  copyPos(cubeBody,currElement.object3D)
+  copyRot(cubeBody,currElement.object3D)
+  physicsScene.add(cubeBody)*/
+  towerMesh.push(currElement.object3D)
+  if (direction=="x"){
+    direction="z"
+  }
+  else{
+    direction = "x"
+  }
+  if (towerMesh.length>7){
+    let foundFirstNonZero = false
+    towerMesh.forEach((e)=>{
+      e.position.y += -cubeSize.y
+      if (e.scale.y != 0 && !foundFirstNonZero){
+        e.scale.y = 0
+        e.visible = false
+        foundFirstNonZero = true
+      }
+    })
+  }
+}
+  //physicsElements.push(cubeBody)
+}
+function copyPos(DST,SRC,ox=0,oy=0,oz=0){
+  DST.position.x = SRC.position.x+ox
+  DST.position.y = SRC.position.y+oy
+  DST.position.z = SRC.position.z+oz
+}
+function copyRot(DST,SRC){
+  DST.quaternion.x = SRC.quaternion.x
+  DST.quaternion.y = SRC.quaternion.y
+  DST.quaternion.z = SRC.quaternion.z
+  DST.quaternion.w = SRC.quaternion.w
+}
+</script>
+  <body style="margin : 0px; overflow: hidden;">
+    <a-scene embedded arjs main>
+      <a-marker preset="hiro" smooth="true">
+
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
