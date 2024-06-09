@@ -38,7 +38,7 @@ planeBody.addShape(planeShape)
 planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2)
 planeBody.position.y = -2.5 
 physicsScene.addBody(planeBody)
-document.addEventListener("touchend",onPress)
+//document.addEventListener("touchend",onPress)
 document.addEventListener("mouseup",onPress)
 
 AFRAME.registerComponent("main",{
