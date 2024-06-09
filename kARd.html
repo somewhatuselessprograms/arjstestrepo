@@ -12,14 +12,75 @@
   <!-- we import arjs version without NFT but with marker + location based support -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <script>
+    //constructor(videoElement, sequenceFolder, framesLen, loop, prefix, zeros, fps)
+    class video {
+      playing = false
+      textures = []
+      newTime =  0
+      oldTime = 0
+      frameIndex = 0
+      constructor(videoElement, sequenceFolder, framesLen, loop, prefix, zeros, fps){
+        this.videoElement = videoElement
+        this.sequenceFolder = sequenceFolder
+        this.loop = loop
+        this.prefix = prefix
+        this.zeros = zeros
+        this.fps = fps
+        this.framesLen = framesLen
+      }
+      init(){
+        this.oldTime = Date.now()
+          for (let i = 0; i < this.framesLen; i++){
+            let currZeros = this.zeros
+            let src = this.sequenceFolder + "/" + this.prefix
+            if (i!=0){
+              currZeros-=Math.floor(Math.log10(i))+1
+            }
+            src += "0".repeat(currZeros)
+            if (i!=0){
+              src += i
+            }
+            src+=".png"
+            this.textures.push(new THREE.TextureLoader().load(src))
+          }
+        this.newTime = Date.now()
+      }
+      updateFrame = ()=>{
+        this.newTime = Date.now()
+        if ((this.newTime-this.oldTime)>=(1000/this.fps)){
+          this.videoElement.getObject3D("mesh").material.map = this.textures[this.frameIndex]
+          this.oldTime = Date.now()
+          if (this.frameIndex < this.framesLen-1){
+          this.frameIndex += 1
+          }
+          else{
+            this.frameIndex = 0
+          } 
+        }
+        if (this.playing){
+          requestAnimationFrame(this.updateFrame)
+        }
+      }
+
+      play(){
+        this.playing = true
+        requestAnimationFrame(this.updateFrame)
+      }
+      pause(){
+        this.playing = false
+      }
+    }
+
     let marker = ""
     let assets = ""
     let folder = "test01kard"
     let alreadyAdded = false
     let opacity = 0
     let videoIndexes = [0]
+    let videoSettings = {0:[97,true,"01_",3,30]}
     let htmlElements = []
     let aframeElements = []
+    let videoInstances = []
     let layersLen = 6
     let layerHeight = 0.005
     let maxLayerHeight = 0.25
@@ -43,12 +104,9 @@
         src += i
       }
         if (videoIndexes.includes(i)){
-        currElement= document.createElement("video")
-        currElement.setAttribute("src",src+".mp4")
-        currElement.setAttribute("id",i)
-        htmlElements.push(currElement)
-        assets.appendChild(currElement)
-        currElement= document.createElement("a-video")
+           currElement= document.createElement("a-image")
+           let s = videoSettings[i]
+           videoInstances.push(new video(currElement,src,s[0],s[1],s[2],s[3],s[4]))
         }
         else{
         currElement= document.createElement("image")
@@ -57,56 +115,40 @@
         htmlElements.push(currElement)
         assets.appendChild(currElement)
         currElement= document.createElement("a-image")
+        currElement.setAttribute("src","#"+i)
       }
-      currElement.setAttribute("src","#"+i)
       currElement.setAttribute("width",size)
       currElement.setAttribute("height",size)
       aframeElements.push(currElement)
       marker.appendChild(currElement)
       }
-      let played = false
-      document.addEventListener("touchend",onPress)
-      document.addEventListener("mouseup",onPress)
-      function onPress(){
-        if (!played){
-        htmlElements.forEach((e,i)=>{
-          if (videoIndexes.includes(i)){
-          e.loop = true
-          e.play()
-          e.pause()
-        }
-        })
-        played = true
-      }
-      }
+      videoInstances.forEach((e)=>{
+        e.init()
+        e.play()
+      })
       let oldTime = new Date().getTime()
       marker.addEventListener("markerFound",(e)=>{
         let inter0 = setInterval(()=>{
-          if (played){
             if ((new Date().getTime()-oldTime)>1000){
               opacity = 0
               layerHeight = minLayerHeight
-          let intr1 = setInterval(()=>{
-            opacity += 0.02
-            if (opacity >= 1){
-              let intr2 = setInterval(()=>{
-            layerHeight += 0.02
-            if (layerHeight >= maxLayerHeight){
-              clearInterval(intr2)
-            }
-          },50)
+              let intr1 = setInterval(()=>{
+                opacity += 0.02
+                if (opacity >= 1){
+                let intr2 = setInterval(()=>{
+                  layerHeight += 0.02
+                  if (layerHeight >= maxLayerHeight){
+                    clearInterval(intr2)
+                  }
+                },50)
               clearInterval(intr1)
             }
           },50)
-          htmlElements.forEach((e,i)=>{
-          if (videoIndexes.includes(i)){
-          e.currentTime = 0
-          e.play()
-        }
+          videoInstances.forEach((e,i)=>{
+          e.frameIndex = 0
         })
         } 
-        clearInterval(inter0)   
-          }
+        clearInterval(inter0)
         })      
    })
       marker.addEventListener("markerLost",(e)=>{
@@ -116,7 +158,9 @@
     },
     tick:()=>{
       aframeElements.forEach((e,i)=>{
+        if (!videoIndexes.includes(i)){
         e.setAttribute("opacity",opacity)
+      }
         e.object3D.position.y = layerHeight*i
         e.object3D.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2)
       })
