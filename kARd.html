@@ -12,7 +12,15 @@
   <!-- we import arjs version without NFT but with marker + location based support -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <script>
-    //constructor(videoElement, sequenceFolder, framesLen, loop, prefix, zeros, fps)
+    let layersLen = 7
+      let videoIndexes = [0,6]
+         //constructor(videoElement, sequenceFolder, framesLen, loop, prefix, zeros, fps)
+    let videoSettings = {0:[97,true,"01_",3,30],6:[97,true,"01_",3,30]}
+    //asset folder name:
+    let folder = "test01kard"
+    let size = 1
+    let layerHeight = 0.025
+    //end of user variables
     class video {
       playing = false
       textures = []
@@ -73,21 +81,15 @@
 
     let marker = ""
     let assets = ""
-    let folder = "test01kard"
     let alreadyAdded = false
     let opacity = 0
-    let videoIndexes = [0]
-    let videoSettings = {0:[97,true,"01_",3,30]}
     let htmlElements = []
     let aframeElements = []
     let videoInstances = []
-    let layersLen = 6
-    let layerHeight = 0.005
     let maxLayerHeight = 0.25
     let minLayerHeight = 0.005
     let zeros = 2
     let currElement = ""
-    let size = 4
     AFRAME.registerComponent("main",{
     init:()=>{
       marker = document.querySelector("a-marker")
@@ -131,16 +133,16 @@
         let inter0 = setInterval(()=>{
             if ((new Date().getTime()-oldTime)>1000){
               opacity = 0
-              layerHeight = minLayerHeight
+              //layerHeight = minLayerHeight
               let intr1 = setInterval(()=>{
                 opacity += 0.02
-                if (opacity >= 1){
+                if (opacity >= 1){/*
                 let intr2 = setInterval(()=>{
                   layerHeight += 0.02
                   if (layerHeight >= maxLayerHeight){
                     clearInterval(intr2)
                   }
-                },50)
+                },50)*/
               clearInterval(intr1)
             }
           },50)
